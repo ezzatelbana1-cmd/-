@@ -1,0 +1,44 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android project files
+        run: |
+          flutter create --platforms=android --project-name wps_clone --org com.example tmp_app
+          cp -R tmp_app/android ./android
+          rm -rf tmp_app
+          sed -i 's/android:label="[^"]*"/android:label="WPS Clone"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wps-clone-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
